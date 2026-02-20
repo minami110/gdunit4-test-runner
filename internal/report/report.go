@@ -70,7 +70,6 @@ type Summary struct {
 type CrashDetails struct {
 	CrashInfo    string `json:"crash_info,omitempty"`
 	ScriptErrors string `json:"script_errors,omitempty"`
-	EngineErrors string `json:"engine_errors,omitempty"`
 }
 
 // Failure represents a single test failure.
@@ -186,7 +185,6 @@ func DetectCrash(logPath string) (*CrashDetails, error) {
 
 	var crashLines []string
 	var scriptErrorLines []string
-	var engineErrorLines []string
 
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -196,22 +194,19 @@ func DetectCrash(logPath string) (*CrashDetails, error) {
 			crashLines = append(crashLines, line)
 		case strings.HasPrefix(line, "SCRIPT ERROR:"):
 			scriptErrorLines = append(scriptErrorLines, line)
-		case strings.HasPrefix(line, "ERROR:"):
-			engineErrorLines = append(engineErrorLines, line)
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("failed to read log file: %w", err)
 	}
 
-	if len(crashLines) == 0 && len(scriptErrorLines) == 0 && len(engineErrorLines) == 0 {
+	if len(crashLines) == 0 && len(scriptErrorLines) == 0 {
 		return nil, nil
 	}
 
 	return &CrashDetails{
 		CrashInfo:    strings.Join(crashLines, "\n"),
 		ScriptErrors: strings.Join(scriptErrorLines, "\n"),
-		EngineErrors: strings.Join(engineErrorLines, "\n"),
 	}, nil
 }
 

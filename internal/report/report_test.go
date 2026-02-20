@@ -131,6 +131,27 @@ func TestDetectCrash_NoCrash(t *testing.T) {
 	}
 }
 
+func TestDetectCrash_EngineErrorOnly_NoCrash(t *testing.T) {
+	f, err := os.CreateTemp("", "engine-error-only-*.log")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	f.WriteString("Godot Engine v4.2 - https://godotengine.org\n")
+	f.WriteString("ERROR: 150 resources still in use at exit.\n")
+	f.WriteString("ERROR: [ScenarioPathResolver] Scenario file not found: res://tests/missing.gd\n")
+	f.WriteString("ERROR: Pages in use exist at exit in PagedAllocator: ...\n")
+	f.Close()
+
+	result, err := DetectCrash(f.Name())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result != nil {
+		t.Errorf("expected nil for engine-only errors (no real crash), got %+v", result)
+	}
+}
+
 func TestDetectCrash_WithCrash(t *testing.T) {
 	path := filepath.Join("..", "..", "testdata", "sample_crash.log")
 	result, err := DetectCrash(path)
@@ -145,9 +166,6 @@ func TestDetectCrash_WithCrash(t *testing.T) {
 	}
 	if !strings.Contains(result.ScriptErrors, "SCRIPT ERROR:") {
 		t.Errorf("ScriptErrors should contain 'SCRIPT ERROR:', got: %q", result.ScriptErrors)
-	}
-	if !strings.Contains(result.EngineErrors, "ERROR:") {
-		t.Errorf("EngineErrors should contain 'ERROR:', got: %q", result.EngineErrors)
 	}
 }
 
