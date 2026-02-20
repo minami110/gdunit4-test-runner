@@ -14,21 +14,24 @@ type RunResult struct {
 }
 
 // BuildArgs constructs the Godot command arguments for gdUnit4.
-func BuildArgs(resPath string) []string {
-	return []string{
+// Each path in resPaths is passed as a separate -a flag.
+func BuildArgs(resPaths []string) []string {
+	args := []string{
 		"--headless",
 		"-s", "-d",
 		"res://addons/gdUnit4/bin/GdUnitCmdTool.gd",
-		"-a", resPath,
-		"--ignoreHeadlessMode",
-		"-c",
 	}
+	for _, p := range resPaths {
+		args = append(args, "-a", p)
+	}
+	args = append(args, "--ignoreHeadlessMode", "-c")
+	return args
 }
 
 // Run executes Godot with gdUnit4 arguments from projectDir.
 // Output is captured to a temporary log file; if verbose is true it is also written to stderr.
-func Run(godotPath, projectDir, resPath string, verbose bool) (*RunResult, error) {
-	args := BuildArgs(resPath)
+func Run(godotPath, projectDir string, resPaths []string, verbose bool) (*RunResult, error) {
+	args := BuildArgs(resPaths)
 	cmd := exec.Command(godotPath, args...)
 	cmd.Dir = projectDir
 

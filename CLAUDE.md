@@ -39,16 +39,17 @@ internal/report/
 - Returns error for missing or invalid configuration
 
 **`internal/detector`**
-- Accepts a filesystem path (absolute or relative)
-- Walks up the directory tree looking for `project.godot`
+- Accepts a slice of filesystem paths (absolute or relative)
+- Walks up the directory tree from the first path looking for `project.godot`
 - Verifies `addons/gdUnit4/` exists at the project root
-- Converts the original test path to a `res://`-relative path
-- Returns `*Result{ ProjectDir, ResPath }` or error
+- Validates all paths belong to the same project
+- Converts each test path to a `res://`-relative path
+- Returns `*Result{ ProjectDir, ResPaths }` or error
 
 **`internal/runner`**
-- Accepts godotPath, projectDir, resPath, verbose
-- Constructs the Godot command: `godot --headless -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a <resPath> --ignoreHeadlessMode -c`
-- Sets `cmd.Dir = projectDir` (runs from project root, not `--path`)
+- Accepts godotPath, projectDir, resPaths, verbose
+- Constructs the Godot command: `godot --headless -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a <path1> -a <path2> --ignoreHeadlessMode -c`
+- Sets `cmd.Dir = projectDir` (runs from project root)
 - Captures stdout+stderr to a temp log file
 - If verbose, tees output to stderr via `io.MultiWriter`
 - Returns `*RunResult{ ExitCode, LogFile }` — caller owns the log file
@@ -75,7 +76,7 @@ Only the Go standard library. No Cobra, no Viper, no third-party packages.
 
 ### Standard `flag` package
 
-Use `flag.NewFlagSet` + `ContinueOnError` for testability. Support both `-v` and `--verbose` by binding two flags to the same bool variable.
+Use `flag.NewFlagSet` + `ContinueOnError` for testability. Positional arguments after flags are collected via `fs.Args()`. Flags must precede positional args (standard `flag` package behavior).
 
 ### Exit codes
 
@@ -88,7 +89,7 @@ Use `flag.NewFlagSet` + `ContinueOnError` for testability. Support both `-v` and
 ### Output separation
 
 - **stdout**: JSON result only
-- **stderr**: Verbose Godot output (when `-v`), error messages
+- **stderr**: Verbose Godot output (when `--verbose`), error messages
 
 ### Temp log file ownership
 
@@ -97,9 +98,13 @@ Use `flag.NewFlagSet` + `ContinueOnError` for testability. Support both `-v` and
 ### Godot execution
 
 ```go
-cmd := exec.Command(godotPath, "--headless", "-s", "-d",
-    "res://addons/gdUnit4/bin/GdUnitCmdTool.gd",
-    "-a", resPath, "--ignoreHeadlessMode", "-c")
+// Multiple -a flags for multiple paths
+args := []string{"--headless", "-s", "-d", "res://addons/gdUnit4/bin/GdUnitCmdTool.gd"}
+for _, p := range resPaths {
+    args = append(args, "-a", p)
+}
+args = append(args, "--ignoreHeadlessMode", "-c")
+cmd := exec.Command(godotPath, args...)
 cmd.Dir = projectDir  // run from project root
 ```
 
@@ -113,7 +118,7 @@ If none resolve to an executable file, return an error from config validation.
 
 ### Project detection
 
-Starting from the absolute path of `--path`, walk up parent directories until `project.godot` is found or the filesystem root is reached. Then check that `<projectDir>/addons/gdUnit4/` exists. Convert `--path` to `res://` using `filepath.Rel` + `filepath.ToSlash`.
+Starting from the absolute path of the first positional arg, walk up parent directories until `project.godot` is found or the filesystem root is reached. Then check that `<projectDir>/addons/gdUnit4/` exists. Convert each path to `res://` using `filepath.Rel` + `filepath.ToSlash`. All paths must belong to the same project.
 
 ## Development
 
@@ -144,8 +149,8 @@ Or via Makefile: `make build`, `make test`, `make lint`, `make fmt`
 Place a Godot project in `sandbox/` (gitignored) for manual end-to-end testing:
 
 ```sh
-./gdunit4-test-runner --path sandbox/tests/ --godot-path /path/to/godot -v
-./gdunit4-test-runner --path sandbox/tests/ | jq .
+./gdunit4-test-runner --godot-path /path/to/godot --verbose sandbox/tests/
+./gdunit4-test-runner --godot-path /path/to/godot sandbox/tests/ | jq .
 ```
 
 ## Important Patterns
@@ -158,6 +163,7 @@ Place a Godot project in `sandbox/` (gitignored) for manual end-to-end testing:
 // result:     res://tests/unit
 rel, err := filepath.Rel(projectDir, testPath)
 resPath := "res://" + filepath.ToSlash(rel)
+// Applied to each path in testPaths; results stored in ResPaths []string
 ```
 
 ### Crash detection

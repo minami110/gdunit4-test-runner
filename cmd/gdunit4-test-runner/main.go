@@ -32,13 +32,13 @@ func run() int {
 		return 2
 	}
 
-	detected, err := detector.Detect(cfg.TestPath)
+	detected, err := detector.Detect(cfg.TestPaths)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 2
 	}
 
-	result, err := runner.Run(cfg.GodotPath, detected.ProjectDir, detected.ResPath, cfg.Verbose)
+	result, err := runner.Run(cfg.GodotPath, detected.ProjectDir, detected.ResPaths, cfg.Verbose)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)
 		return 2

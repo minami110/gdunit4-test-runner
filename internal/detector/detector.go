@@ -9,19 +9,25 @@ import (
 
 // Result holds the outcome of project detection.
 type Result struct {
-	ProjectDir string // absolute path to the directory containing project.godot
-	ResPath    string // res://-relative path for the test target
+	ProjectDir string   // absolute path to the directory containing project.godot
+	ResPaths   []string // res://-relative paths for the test targets
 }
 
-// Detect finds the Godot project root for testPath and converts testPath to a res:// path.
-// It walks up from testPath looking for project.godot, then verifies addons/gdUnit4/ exists.
-func Detect(testPath string) (*Result, error) {
-	absPath, err := filepath.Abs(testPath)
+// Detect finds the Godot project root for testPaths and converts each path to a res:// path.
+// It walks up from the first path looking for project.godot, then verifies addons/gdUnit4/ exists.
+// All paths must belong to the same Godot project.
+func Detect(testPaths []string) (*Result, error) {
+	if len(testPaths) == 0 {
+		return nil, errors.New("no test paths provided")
+	}
+
+	// Use the first path to determine project root.
+	firstAbs, err := filepath.Abs(testPaths[0])
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve absolute path: %w", err)
 	}
 
-	projectDir, err := findProjectRoot(absPath)
+	projectDir, err := findProjectRoot(firstAbs)
 	if err != nil {
 		return nil, err
 	}
@@ -30,14 +36,32 @@ func Detect(testPath string) (*Result, error) {
 		return nil, err
 	}
 
-	resPath, err := toResPath(projectDir, absPath)
-	if err != nil {
-		return nil, err
+	resPaths := make([]string, 0, len(testPaths))
+	for _, p := range testPaths {
+		absPath, err := filepath.Abs(p)
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve absolute path for %s: %w", p, err)
+		}
+
+		// Verify this path belongs to the same project by finding its root.
+		root, err := findProjectRoot(absPath)
+		if err != nil {
+			return nil, fmt.Errorf("path %s: %w", p, err)
+		}
+		if root != projectDir {
+			return nil, fmt.Errorf("path %s belongs to a different Godot project (%s), expected %s", p, root, projectDir)
+		}
+
+		resPath, err := toResPath(projectDir, absPath)
+		if err != nil {
+			return nil, err
+		}
+		resPaths = append(resPaths, resPath)
 	}
 
 	return &Result{
 		ProjectDir: projectDir,
-		ResPath:    resPath,
+		ResPaths:   resPaths,
 	}, nil
 }
 
@@ -67,7 +91,7 @@ func findProjectRoot(startPath string) (string, error) {
 		dir = parent
 	}
 
-	return "", errors.New("project.godot not found; point --path to a subdirectory of your Godot project")
+	return "", errors.New("project.godot not found; point the path to a subdirectory of your Godot project")
 }
 
 // verifyGdUnit4 checks that addons/gdUnit4/ exists under projectDir.
