@@ -21,10 +21,48 @@ func makeDummyExecutable(t *testing.T, dir, name string) string {
 	return path
 }
 
-func TestParse_RequiresPath(t *testing.T) {
-	_, err := Parse([]string{})
-	if err == nil {
-		t.Fatal("expected error when --path is missing, got nil")
+func TestParse_DefaultToCurrentDir(t *testing.T) {
+	dir := t.TempDir()
+	godot := makeDummyExecutable(t, dir, "godot")
+
+	cfg, err := Parse([]string{"--godot-path", godot})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.TestPaths) != 1 || cfg.TestPaths[0] != "." {
+		t.Errorf("TestPaths = %v, want [\".\"]", cfg.TestPaths)
+	}
+}
+
+func TestParse_SinglePath(t *testing.T) {
+	dir := t.TempDir()
+	godot := makeDummyExecutable(t, dir, "godot")
+
+	cfg, err := Parse([]string{"--godot-path", godot, "/tmp/tests"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.TestPaths) != 1 || cfg.TestPaths[0] != "/tmp/tests" {
+		t.Errorf("TestPaths = %v, want [\"/tmp/tests\"]", cfg.TestPaths)
+	}
+}
+
+func TestParse_MultiplePaths(t *testing.T) {
+	dir := t.TempDir()
+	godot := makeDummyExecutable(t, dir, "godot")
+
+	cfg, err := Parse([]string{"--godot-path", godot, "tests/unit", "tests/integration", "foo.gd"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := []string{"tests/unit", "tests/integration", "foo.gd"}
+	if len(cfg.TestPaths) != len(want) {
+		t.Fatalf("TestPaths = %v, want %v", cfg.TestPaths, want)
+	}
+	for i, p := range want {
+		if cfg.TestPaths[i] != p {
+			t.Errorf("TestPaths[%d] = %q, want %q", i, cfg.TestPaths[i], p)
+		}
 	}
 }
 
@@ -42,13 +80,6 @@ func TestParse_VersionReturnsErrVersion(t *testing.T) {
 	}
 }
 
-func TestParse_VersionShortFlag(t *testing.T) {
-	_, err := Parse([]string{"-V"})
-	if err != ErrVersion {
-		t.Fatalf("expected ErrVersion, got %v", err)
-	}
-}
-
 func TestParse_UnknownFlag(t *testing.T) {
 	_, err := Parse([]string{"--unknown-flag"})
 	if err == nil {
@@ -60,15 +91,15 @@ func TestParse_GodotPathFromFlag(t *testing.T) {
 	dir := t.TempDir()
 	godot := makeDummyExecutable(t, dir, "godot")
 
-	cfg, err := Parse([]string{"--path", "/tmp/tests", "--godot-path", godot})
+	cfg, err := Parse([]string{"--godot-path", godot, "/tmp/tests"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if cfg.GodotPath != godot {
 		t.Errorf("GodotPath = %q, want %q", cfg.GodotPath, godot)
 	}
-	if cfg.TestPath != "/tmp/tests" {
-		t.Errorf("TestPath = %q, want /tmp/tests", cfg.TestPath)
+	if len(cfg.TestPaths) != 1 || cfg.TestPaths[0] != "/tmp/tests" {
+		t.Errorf("TestPaths = %v, want [\"/tmp/tests\"]", cfg.TestPaths)
 	}
 }
 
@@ -78,7 +109,7 @@ func TestParse_GodotPathFromEnv(t *testing.T) {
 
 	t.Setenv("GODOT_PATH", godot)
 
-	cfg, err := Parse([]string{"--path", "/tmp/tests"})
+	cfg, err := Parse([]string{"/tmp/tests"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -94,7 +125,7 @@ func TestParse_GodotPathFlagTakesPrecedenceOverEnv(t *testing.T) {
 
 	t.Setenv("GODOT_PATH", godotEnv)
 
-	cfg, err := Parse([]string{"--path", "/tmp/tests", "--godot-path", godotFlag})
+	cfg, err := Parse([]string{"--godot-path", godotFlag, "/tmp/tests"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -103,24 +134,11 @@ func TestParse_GodotPathFlagTakesPrecedenceOverEnv(t *testing.T) {
 	}
 }
 
-func TestParse_VerboseShortFlag(t *testing.T) {
-	dir := t.TempDir()
-	godot := makeDummyExecutable(t, dir, "godot")
-
-	cfg, err := Parse([]string{"--path", "/tmp/tests", "--godot-path", godot, "-v"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !cfg.Verbose {
-		t.Error("Verbose should be true when -v is set")
-	}
-}
-
 func TestParse_VerboseLongFlag(t *testing.T) {
 	dir := t.TempDir()
 	godot := makeDummyExecutable(t, dir, "godot")
 
-	cfg, err := Parse([]string{"--path", "/tmp/tests", "--godot-path", godot, "--verbose"})
+	cfg, err := Parse([]string{"--godot-path", godot, "--verbose"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -137,14 +155,14 @@ func TestParse_GodotPathNotExecutable(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := Parse([]string{"--path", "/tmp/tests", "--godot-path", path})
+	_, err := Parse([]string{"--godot-path", path, "/tmp/tests"})
 	if err == nil {
 		t.Fatal("expected error for non-executable godot path, got nil")
 	}
 }
 
 func TestParse_GodotPathNotFound(t *testing.T) {
-	_, err := Parse([]string{"--path", "/tmp/tests", "--godot-path", "/nonexistent/godot"})
+	_, err := Parse([]string{"--godot-path", "/nonexistent/godot", "/tmp/tests"})
 	if err == nil {
 		t.Fatal("expected error for nonexistent godot path, got nil")
 	}

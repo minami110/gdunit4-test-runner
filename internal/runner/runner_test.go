@@ -8,9 +8,9 @@ import (
 	"testing"
 )
 
-func TestBuildArgs(t *testing.T) {
+func TestBuildArgs_SinglePath(t *testing.T) {
 	resPath := "res://tests/unit"
-	args := BuildArgs(resPath)
+	args := BuildArgs([]string{resPath})
 
 	// Must include --headless
 	if !contains(args, "--headless") {
@@ -45,6 +45,44 @@ func TestBuildArgs(t *testing.T) {
 	}
 }
 
+func TestBuildArgs_MultiplePaths(t *testing.T) {
+	resPaths := []string{"res://tests/unit", "res://tests/integration"}
+	args := BuildArgs(resPaths)
+
+	// Count -a occurrences.
+	count := 0
+	for _, a := range args {
+		if a == "-a" {
+			count++
+		}
+	}
+	if count != 2 {
+		t.Errorf("expected 2 -a flags, got %d", count)
+	}
+
+	// Both paths must appear.
+	if !contains(args, "res://tests/unit") {
+		t.Error("args should contain res://tests/unit")
+	}
+	if !contains(args, "res://tests/integration") {
+		t.Error("args should contain res://tests/integration")
+	}
+
+	// Verify ordering: -a path1 -a path2
+	idx1 := indexOf(args, "-a")
+	if idx1 == -1 || idx1+1 >= len(args) || args[idx1+1] != "res://tests/unit" {
+		t.Errorf("first -a should be followed by res://tests/unit, args = %v", args)
+	}
+	idx2 := indexOf(args[idx1+2:], "-a")
+	if idx2 == -1 {
+		t.Fatal("expected second -a flag")
+	}
+	idx2 += idx1 + 2
+	if idx2+1 >= len(args) || args[idx2+1] != "res://tests/integration" {
+		t.Errorf("second -a should be followed by res://tests/integration, args = %v", args)
+	}
+}
+
 func TestRun_CapturesOutput(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("skipping shell script test on Windows")
@@ -58,7 +96,7 @@ func TestRun_CapturesOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := Run(script, dir, "res://tests", false)
+	result, err := Run(script, dir, []string{"res://tests"}, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -89,7 +127,7 @@ func TestRun_NonZeroExitCode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := Run(script, dir, "res://tests", false)
+	result, err := Run(script, dir, []string{"res://tests"}, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -111,7 +149,7 @@ func TestRun_LogFileExists(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := Run(script, dir, "res://tests", false)
+	result, err := Run(script, dir, []string{"res://tests"}, false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -126,7 +164,7 @@ func TestRun_LogFileExists(t *testing.T) {
 }
 
 func TestRun_BinaryNotFound(t *testing.T) {
-	_, err := Run("/nonexistent/godot", "/tmp", "res://tests", false)
+	_, err := Run("/nonexistent/godot", "/tmp", []string{"res://tests"}, false)
 	if err == nil {
 		t.Fatal("expected error when godot binary not found, got nil")
 	}

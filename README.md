@@ -27,26 +27,35 @@ go install github.com/minami110/gdunit4-test-runner/cmd/gdunit4-test-runner@late
 ### Basic
 
 ```sh
-# Run all tests under res://tests/ and get JSON output
-gdunit4-test-runner --path tests/
+# Run all tests under tests/ (current directory is used if no path given)
+gdunit4-test-runner tests/
 
 # Run tests with a specific Godot binary
-gdunit4-test-runner --path tests/ --godot-path /usr/local/bin/godot4
+gdunit4-test-runner --godot-path /usr/local/bin/godot4 tests/
+
+# Run multiple paths at once
+gdunit4-test-runner tests/unit tests/integration
+
+# Run a single test file
+gdunit4-test-runner tests/MyTest.gd
 
 # Run tests and stream Godot output to stderr while JSON goes to stdout
-gdunit4-test-runner --path tests/ -v
+gdunit4-test-runner --verbose tests/
+
+# Use current directory (omit path entirely)
+gdunit4-test-runner --godot-path /usr/local/bin/godot4
 
 # Parse JSON output with jq
-gdunit4-test-runner --path tests/ | jq .summary
+gdunit4-test-runner tests/ | jq .summary
 ```
 
 ### CLI Flags
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--path` | *(required)* | Path to test directory or file (relative or absolute) |
+| `[paths...]` | `.` (current dir) | One or more paths to test directories or files (relative or absolute) |
 | `--godot-path` | *(auto)* | Path to Godot binary. Overrides `GODOT_PATH` env and PATH lookup |
-| `-v`, `--verbose` | `false` | Stream raw Godot output to stderr |
+| `--verbose` | `false` | Stream raw Godot output to stderr |
 
 ### Environment Variables
 
@@ -95,13 +104,13 @@ gdunit4-test-runner --path tests/ | jq .summary
 
 ## How It Works
 
-1. **Project detection**: Starting from `--path`, walks up the directory tree to find `project.godot`. Also verifies that `addons/gdUnit4/` is present.
-2. **Path conversion**: Converts the filesystem path to a `res://`-relative path.
+1. **Project detection**: Starting from the first given path, walks up the directory tree to find `project.godot`. Also verifies that `addons/gdUnit4/` is present.
+2. **Path conversion**: Converts each filesystem path to a `res://`-relative path.
 3. **Execution**: Runs Godot from the project directory:
    ```
-   godot --headless -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a <res://path> --ignoreHeadlessMode -c
+   godot --headless -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a <res://path1> -a <res://path2> --ignoreHeadlessMode -c
    ```
-4. **Output capture**: Captures Godot stdout+stderr to a temp log file; if `-v` is set, also tees to stderr.
+4. **Output capture**: Captures Godot stdout+stderr to a temp log file; if `--verbose` is set, also tees to stderr.
 5. **Crash detection**: Scans the log for `handle_crash:`, `SCRIPT ERROR:`, and `ERROR:` patterns.
 6. **Report parsing**: Reads `reports/report_*/results.xml` (JUnit XML) produced by gdUnit4.
 7. **JSON output**: Writes structured results to stdout.

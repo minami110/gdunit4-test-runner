@@ -8,12 +8,12 @@ import (
 	"os/exec"
 )
 
-// ErrVersion is returned by Parse when the user requests --version or -V.
+// ErrVersion is returned by Parse when the user requests --version.
 var ErrVersion = errors.New("version requested")
 
 // Config holds all runtime settings for the tool.
 type Config struct {
-	TestPath  string
+	TestPaths []string
 	GodotPath string
 	Verbose   bool
 }
@@ -23,26 +23,22 @@ type Config struct {
 func Parse(args []string) (*Config, error) {
 	fs := flag.NewFlagSet("gdunit4-test-runner", flag.ContinueOnError)
 
-	var testPath string
 	var godotPath string
 	var verbose bool
 	var showVersion bool
 
-	fs.StringVar(&testPath, "path", "", "path to test directory or file (required)")
 	fs.StringVar(&godotPath, "godot-path", "", "path to Godot binary")
-	fs.BoolVar(&verbose, "v", false, "stream Godot output to stderr")
 	fs.BoolVar(&verbose, "verbose", false, "stream Godot output to stderr")
-	fs.BoolVar(&showVersion, "V", false, "print version and exit")
 	fs.BoolVar(&showVersion, "version", false, "print version and exit")
 
 	fs.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: gdunit4-test-runner [options]\n\n")
+		fmt.Fprintf(os.Stderr, "Usage: gdunit4-test-runner [options] [paths...]\n\n")
 		fmt.Fprintf(os.Stderr, "Options:\n")
-		fmt.Fprintf(os.Stderr, "  --path <path>        path to test directory or file (required)\n")
 		fmt.Fprintf(os.Stderr, "  --godot-path <path>  path to Godot binary\n")
-		fmt.Fprintf(os.Stderr, "  -v, --verbose        stream Godot output to stderr\n")
-		fmt.Fprintf(os.Stderr, "  -V, --version        print version and exit\n")
-		fmt.Fprintf(os.Stderr, "  -h, --help           show this help\n")
+		fmt.Fprintf(os.Stderr, "  --verbose            stream Godot output to stderr\n")
+		fmt.Fprintf(os.Stderr, "  --version            print version and exit\n")
+		fmt.Fprintf(os.Stderr, "  --help               show this help\n")
+		fmt.Fprintf(os.Stderr, "\nIf no paths are given, the current directory is used.\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
@@ -53,8 +49,9 @@ func Parse(args []string) (*Config, error) {
 		return nil, ErrVersion
 	}
 
-	if testPath == "" {
-		return nil, errors.New("--path is required")
+	testPaths := fs.Args()
+	if len(testPaths) == 0 {
+		testPaths = []string{"."}
 	}
 
 	resolvedGodot, err := resolveGodotPath(godotPath)
@@ -63,7 +60,7 @@ func Parse(args []string) (*Config, error) {
 	}
 
 	return &Config{
-		TestPath:  testPath,
+		TestPaths: testPaths,
 		GodotPath: resolvedGodot,
 		Verbose:   verbose,
 	}, nil
