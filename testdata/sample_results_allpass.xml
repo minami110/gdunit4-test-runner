@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="5" failures="0" errors="0" time="0.250">
+  <testsuite name="TestSuitePass" package="res://tests/unit/TestSuitePass.gd" tests="5" failures="0" errors="0" time="0.250">
+    <testcase name="test_one" classname="TestSuitePass" time="0.050"/>
+    <testcase name="test_two" classname="TestSuitePass" time="0.050"/>
+    <testcase name="test_three" classname="TestSuitePass" time="0.050"/>
+    <testcase name="test_four" classname="TestSuitePass" time="0.050"/>
+    <testcase name="test_five" classname="TestSuitePass" time="0.050"/>
+  </testsuite>
+</testsuites>

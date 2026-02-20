@@ -1,0 +1,8 @@
+# Godot generated files
+.godot/
+
+# gdUnit4 test reports (generated at runtime)
+reports/
+
+# gdUnit4 addon (user must install manually or via symlink)
+addons/gdUnit4/
