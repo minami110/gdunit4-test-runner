@@ -1,0 +1,8 @@
+# Binaries
+gdunit4-test-runner
+gdunit4-test-runner.exe
+dist/
+
+# Go
+*.test
+*.out
