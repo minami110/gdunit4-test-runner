@@ -1,6 +1,6 @@
-# Binaries
-gdunit4-test-runner
-gdunit4-test-runner.exe
+# Binaries (root-level only to avoid matching cmd/gdunit4-test-runner/)
+/gdunit4-test-runner
+/gdunit4-test-runner.exe
 dist/
 
 # Go

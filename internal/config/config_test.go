@@ -35,6 +35,20 @@ func TestParse_HelpReturnsErrHelp(t *testing.T) {
 	}
 }
 
+func TestParse_VersionReturnsErrVersion(t *testing.T) {
+	_, err := Parse([]string{"--version"})
+	if err != ErrVersion {
+		t.Fatalf("expected ErrVersion, got %v", err)
+	}
+}
+
+func TestParse_VersionShortFlag(t *testing.T) {
+	_, err := Parse([]string{"-V"})
+	if err != ErrVersion {
+		t.Fatalf("expected ErrVersion, got %v", err)
+	}
+}
+
 func TestParse_UnknownFlag(t *testing.T) {
 	_, err := Parse([]string{"--unknown-flag"})
 	if err == nil {
