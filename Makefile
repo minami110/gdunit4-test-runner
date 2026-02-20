@@ -1,16 +1,18 @@
 BINARY := gdunit4-test-runner
 CMD := ./cmd/gdunit4-test-runner
+VERSION ?= 0.1.0
+LDFLAGS := -ldflags "-X main.version=$(VERSION)"
 
 .PHONY: build build-linux build-windows test integration-test lint fmt clean
 
 build:
-	go build -o $(BINARY) $(CMD)
+	go build $(LDFLAGS) -o $(BINARY) $(CMD)
 
 build-linux:
-	GOOS=linux GOARCH=amd64 go build -o $(BINARY)-linux-amd64 $(CMD)
+	GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(BINARY)-linux-amd64 $(CMD)
 
 build-windows:
-	GOOS=windows GOARCH=amd64 go build -o $(BINARY)-windows-amd64.exe $(CMD)
+	GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o $(BINARY)-windows-amd64.exe $(CMD)
 
 test:
 	go test ./...

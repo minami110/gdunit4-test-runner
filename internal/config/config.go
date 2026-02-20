@@ -8,6 +8,9 @@ import (
 	"os/exec"
 )
 
+// ErrVersion is returned by Parse when the user requests --version or -V.
+var ErrVersion = errors.New("version requested")
+
 // Config holds all runtime settings for the tool.
 type Config struct {
 	TestPath  string
@@ -23,11 +26,14 @@ func Parse(args []string) (*Config, error) {
 	var testPath string
 	var godotPath string
 	var verbose bool
+	var showVersion bool
 
 	fs.StringVar(&testPath, "path", "", "path to test directory or file (required)")
 	fs.StringVar(&godotPath, "godot-path", "", "path to Godot binary")
 	fs.BoolVar(&verbose, "v", false, "stream Godot output to stderr")
 	fs.BoolVar(&verbose, "verbose", false, "stream Godot output to stderr")
+	fs.BoolVar(&showVersion, "V", false, "print version and exit")
+	fs.BoolVar(&showVersion, "version", false, "print version and exit")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: gdunit4-test-runner [options]\n\n")
@@ -35,11 +41,16 @@ func Parse(args []string) (*Config, error) {
 		fmt.Fprintf(os.Stderr, "  --path <path>        path to test directory or file (required)\n")
 		fmt.Fprintf(os.Stderr, "  --godot-path <path>  path to Godot binary\n")
 		fmt.Fprintf(os.Stderr, "  -v, --verbose        stream Godot output to stderr\n")
+		fmt.Fprintf(os.Stderr, "  -V, --version        print version and exit\n")
 		fmt.Fprintf(os.Stderr, "  -h, --help           show this help\n")
 	}
 
 	if err := fs.Parse(args); err != nil {
 		return nil, err
+	}
+
+	if showVersion {
+		return nil, ErrVersion
 	}
 
 	if testPath == "" {
