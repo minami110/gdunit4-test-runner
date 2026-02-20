@@ -1,14 +1,14 @@
 # gdunit4-test-runner
 
-A CLI tool that wraps [gdUnit4](https://github.com/MikeSchulze/gdUnit4) test framework for Godot Engine, enabling easy test execution from the command line and CI/CD pipelines.
+A CLI tool that wraps [gdUnit4](https://github.com/MikeSchulze/gdUnit4) test framework for Godot Engine. It discovers the Godot project root, executes tests via `GdUnitCmdTool.gd`, and outputs structured JSON results.
 
 ## Features
 
 - **Single binary** — no runtime dependencies, just download and run
 - **Cross-platform** — Linux and Windows support
 - **Auto-detection** — automatically finds `project.godot` by walking up from the given path
-- **Exit code passthrough** — preserves gdUnit4 exit codes (0/100/101) for CI integration
-- **Real-time output** — streams stdout/stderr from Godot process as it runs
+- **JSON output** — machine-readable test results on stdout for easy CI integration
+- **Verbose mode** — optionally stream raw Godot output to stderr while JSON goes to stdout
 
 ## Installation
 
@@ -27,14 +27,17 @@ go install github.com/minami110/gdunit4-test-runner/cmd/gdunit4-test-runner@late
 ### Basic
 
 ```sh
-# Run all tests under res://tests/
+# Run all tests under res://tests/ and get JSON output
 gdunit4-test-runner --path tests/
 
 # Run tests with a specific Godot binary
 gdunit4-test-runner --path tests/ --godot-path /usr/local/bin/godot4
 
-# Run tests and continue on failure
-gdunit4-test-runner --path tests/ --continue-on-failure
+# Run tests and stream Godot output to stderr while JSON goes to stdout
+gdunit4-test-runner --path tests/ -v
+
+# Parse JSON output with jq
+gdunit4-test-runner --path tests/ | jq .summary
 ```
 
 ### CLI Flags
@@ -43,7 +46,7 @@ gdunit4-test-runner --path tests/ --continue-on-failure
 |------|---------|-------------|
 | `--path` | *(required)* | Path to test directory or file (relative or absolute) |
 | `--godot-path` | *(auto)* | Path to Godot binary. Overrides `GODOT_PATH` env and PATH lookup |
-| `--continue-on-failure` | `false` | Continue running tests after a failure |
+| `-v`, `--verbose` | `false` | Stream raw Godot output to stderr |
 
 ### Environment Variables
 
@@ -56,21 +59,52 @@ gdunit4-test-runner --path tests/ --continue-on-failure
 | Code | Meaning |
 |------|---------|
 | `0` | All tests passed |
-| `1` | Tool error (missing Godot binary, project not found, etc.) |
-| `100` | Test failure(s) detected |
-| `101` | Test error(s) detected |
+| `1` | Test failure(s) detected |
+| `2` | Crash, tool error, or Godot not found |
+
+## JSON Output Format
+
+```json
+{
+  "summary": {
+    "total": 10,
+    "passed": 8,
+    "failed": 2,
+    "crashed": false,
+    "status": "failed"
+  },
+  "crash_details": null,
+  "failures": [
+    {
+      "class": "TestClass",
+      "method": "test_method",
+      "file": "res://tests/TestClass.gd",
+      "line": 42,
+      "expected": "foo",
+      "actual": "bar",
+      "message": "FAILED: res://tests/TestClass.gd:42"
+    }
+  ]
+}
+```
+
+**`summary.status`** is one of:
+- `"passed"` — all tests passed
+- `"failed"` — one or more test failures
+- `"crashed"` — Godot crashed or a script error occurred
 
 ## How It Works
 
-`gdunit4-test-runner` is a thin wrapper around gdUnit4's `GdUnitCmdTool.gd` script.
-
 1. **Project detection**: Starting from `--path`, walks up the directory tree to find `project.godot`. Also verifies that `addons/gdUnit4/` is present.
-2. **Path conversion**: Converts the filesystem path of the test target to a `res://`-relative path (required by Godot).
-3. **Command construction**: Builds and executes the following command:
+2. **Path conversion**: Converts the filesystem path to a `res://`-relative path.
+3. **Execution**: Runs Godot from the project directory:
    ```
-   godot --path <project-dir> -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a <res://path/to/tests>
+   godot --headless -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a <res://path> --ignoreHeadlessMode -c
    ```
-4. **Output streaming**: Pipes stdout/stderr in real time so test output appears immediately.
+4. **Output capture**: Captures Godot stdout+stderr to a temp log file; if `-v` is set, also tees to stderr.
+5. **Crash detection**: Scans the log for `handle_crash:`, `SCRIPT ERROR:`, and `ERROR:` patterns.
+6. **Report parsing**: Reads `reports/report_*/results.xml` (JUnit XML) produced by gdUnit4.
+7. **JSON output**: Writes structured results to stdout.
 
 ### Godot Binary Resolution Order
 
@@ -84,23 +118,7 @@ gdunit4-test-runner --path tests/ --continue-on-failure
 
 - Go 1.24+
 
-### Build
-
-```sh
-go build ./cmd/gdunit4-test-runner
-```
-
-### Cross-compile
-
-```sh
-# Linux
-GOOS=linux GOARCH=amd64 go build -o dist/gdunit4-test-runner ./cmd/gdunit4-test-runner
-
-# Windows
-GOOS=windows GOARCH=amd64 go build -o dist/gdunit4-test-runner.exe ./cmd/gdunit4-test-runner
-```
-
-### Makefile
+### Commands
 
 ```sh
 make build          # Build for current platform
@@ -108,6 +126,7 @@ make build-linux    # Build for Linux (amd64)
 make build-windows  # Build for Windows (amd64)
 make test           # Run tests
 make lint           # Run go vet
+make fmt            # Format code
 ```
 
 ## License

@@ -6,3 +6,10 @@ dist/
 # Go
 *.test
 *.out
+
+# Local sandbox for manual testing
+sandbox/
+
+# Build artifacts
+gdunit4-test-runner-linux-amd64
+gdunit4-test-runner-windows-amd64.exe

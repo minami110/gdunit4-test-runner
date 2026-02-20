@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites tests="10" failures="2" errors="1" time="1.234">
+  <testsuite name="TestSuiteA" package="res://tests/unit/TestSuiteA.gd" tests="5" failures="1" errors="0" time="0.500">
+    <testcase name="test_addition" classname="TestSuiteA" time="0.001"/>
+    <testcase name="test_subtraction" classname="TestSuiteA" time="0.001"/>
+    <testcase name="test_multiplication" classname="TestSuiteA" time="0.001"/>
+    <testcase name="test_division" classname="TestSuiteA" time="0.001"/>
+    <testcase name="test_division_by_zero" classname="TestSuiteA" time="0.001">
+      <failure message="FAILED: res://tests/unit/TestSuiteA.gd:42">
+        <![CDATA[Expected '0' but was 'INF'
+  At: res://tests/unit/TestSuiteA.gd:42]]>
+      </failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="TestSuiteB" package="res://tests/unit/TestSuiteB.gd" tests="5" failures="1" errors="1" time="0.734">
+    <testcase name="test_string_concat" classname="TestSuiteB" time="0.001"/>
+    <testcase name="test_string_length" classname="TestSuiteB" time="0.001"/>
+    <testcase name="test_string_contains" classname="TestSuiteB" time="0.001">
+      <failure message="FAILED: res://tests/unit/TestSuiteB.gd:88">
+        <![CDATA[Expected 'true' but was 'false'
+  At: res://tests/unit/TestSuiteB.gd:88]]>
+      </failure>
+    </testcase>
+    <testcase name="test_string_split" classname="TestSuiteB" time="0.001"/>
+    <testcase name="test_null_dereference" classname="TestSuiteB" time="0.001">
+      <error message="FAILED: res://tests/unit/TestSuiteB.gd:120">
+        <![CDATA[Script error during test execution
+  At: res://tests/unit/TestSuiteB.gd:120]]>
+      </error>
+    </testcase>
+  </testsuite>
+</testsuites>

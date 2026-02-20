@@ -1,0 +1,18 @@
+Godot Engine v4.2.2.stable.official [b46a31] - https://godotengine.org
+OpenGL API 3.3.0 NVIDIA 535.183.01 - Compatibility - Using Device: NVIDIA - NVIDIA GeForce RTX 3080
+
+Starting gdUnit4 test run...
+Running test suite: res://tests/unit/TestSuiteA.gd
+
+ERROR: Cannot call method 'get_node' on a null instance.
+   at: Node.gd:42
+
+SCRIPT ERROR: Invalid call. Nonexistent function 'foobar' in base 'Node'.
+   at: res://tests/unit/TestSuiteA.gd:55 (TestSuiteA::test_crash)
+
+handle_crash: signal 11 (Segmentation fault)
+Dumping the backtrace. Please include this when reporting the bug to the project owner.
+[1] gdnative_call_native_raw
+[2] GDScriptFunction::call
+
+ERROR: Program crashed with signal 11
