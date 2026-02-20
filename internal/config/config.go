@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 )
 
 // ErrVersion is returned by Parse when the user requests --version.
@@ -102,6 +103,9 @@ func isExecutable(path string) bool {
 	}
 	if info.IsDir() {
 		return false
+	}
+	if runtime.GOOS == "windows" {
+		return true
 	}
 	return info.Mode()&0o111 != 0
 }
