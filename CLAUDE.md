@@ -48,7 +48,7 @@ internal/report/
 
 **`internal/runner`**
 - Accepts godotPath, projectDir, resPaths, verbose
-- Constructs the Godot command: `godot --headless -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a <path1> -a <path2> --ignoreHeadlessMode -c`
+- Constructs the Godot command: `godot --headless -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a <path1> -a <path2> --ignoreHeadlessMode -c`
 - Sets `cmd.Dir = projectDir` (runs from project root)
 - Captures stdout+stderr to a temp log file
 - If verbose, tees output to stderr via `io.MultiWriter`
@@ -99,7 +99,7 @@ Use `flag.NewFlagSet` + `ContinueOnError` for testability. Positional arguments 
 
 ```go
 // Multiple -a flags for multiple paths
-args := []string{"--headless", "-s", "-d", "res://addons/gdUnit4/bin/GdUnitCmdTool.gd"}
+args := []string{"--headless", "-s", "res://addons/gdUnit4/bin/GdUnitCmdTool.gd"}
 for _, p := range resPaths {
     args = append(args, "-a", p)
 }
