@@ -108,7 +108,7 @@ gdunit4-test-runner tests/ | jq .summary
 2. **Path conversion**: Converts each filesystem path to a `res://`-relative path.
 3. **Execution**: Runs Godot from the project directory:
    ```
-   godot --headless -s -d res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a <res://path1> -a <res://path2> --ignoreHeadlessMode -c
+   godot --headless -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a <res://path1> -a <res://path2> --ignoreHeadlessMode -c
    ```
 4. **Output capture**: Captures Godot stdout+stderr to a temp log file; if `--verbose` is set, also tees to stderr.
 5. **Crash detection**: Scans the log for `handle_crash:`, `SCRIPT ERROR:`, and `ERROR:` patterns.

@@ -16,12 +16,13 @@ func TestBuildArgs_SinglePath(t *testing.T) {
 	if !contains(args, "--headless") {
 		t.Error("args should contain --headless")
 	}
-	// Must include -s and -d
+	// Must include -s
 	if !contains(args, "-s") {
 		t.Error("args should contain -s")
 	}
-	if !contains(args, "-d") {
-		t.Error("args should contain -d")
+	// Must NOT include -d (causes interactive debugger hang on Windows)
+	if contains(args, "-d") {
+		t.Error("args should not contain -d")
 	}
 	// Must include the GdUnitCmdTool.gd script
 	if !contains(args, "res://addons/gdUnit4/bin/GdUnitCmdTool.gd") {

@@ -21,7 +21,7 @@ type RunResult struct {
 func BuildArgs(resPaths []string) []string {
 	args := []string{
 		"--headless",
-		"-s", "-d",
+		"-s",
 		"res://addons/gdUnit4/bin/GdUnitCmdTool.gd",
 	}
 	for _, p := range resPaths {
@@ -62,23 +62,19 @@ func Run(godotPath, projectDir string, resPaths []string, verbose bool, timeout 
 	cmd.Stdout = tmpFile
 	cmd.Stderr = tmpFile
 
-	// Create a pipe for stdin and close the write end immediately.
-	// This ensures the child process receives a proper EOF that sets feof(stdin)=true.
-	// Godot's LocalDebugger checks feof(stdin) on empty input — if false,
-	// it loops the debug> prompt indefinitely. NUL (os.DevNull on Windows)
-	// may not set feof, but a closed pipe always does.
-	pr, pw, pipeErr := os.Pipe()
-	if pipeErr != nil {
+	// Redirect stdin from /dev/null (NUL on Windows) so Godot immediately gets
+	// EOF on any stdin read. This avoids hangs when Godot tries to read input.
+	devNull, devNullErr := os.Open(os.DevNull)
+	if devNullErr != nil {
 		tmpFile.Close()
 		_ = os.Remove(tmpPath)
 		if cancelCtx != nil {
 			cancelCtx()
 		}
-		return nil, fmt.Errorf("failed to create stdin pipe: %w", pipeErr)
+		return nil, fmt.Errorf("failed to open devnull: %w", devNullErr)
 	}
-	pw.Close()
-	cmd.Stdin = pr
-	defer pr.Close()
+	defer devNull.Close()
+	cmd.Stdin = devNull
 
 	var wg sync.WaitGroup
 	var stopTail chan struct{}
