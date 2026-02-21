@@ -96,7 +96,7 @@ func TestRun_CapturesOutput(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := Run(script, dir, []string{"res://tests"}, false)
+	result, err := Run(script, dir, []string{"res://tests"}, false, 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -127,7 +127,7 @@ func TestRun_NonZeroExitCode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := Run(script, dir, []string{"res://tests"}, false)
+	result, err := Run(script, dir, []string{"res://tests"}, false, 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -149,7 +149,7 @@ func TestRun_LogFileExists(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	result, err := Run(script, dir, []string{"res://tests"}, false)
+	result, err := Run(script, dir, []string{"res://tests"}, false, 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestRun_LogFileExists(t *testing.T) {
 }
 
 func TestRun_BinaryNotFound(t *testing.T) {
-	_, err := Run("/nonexistent/godot", "/tmp", []string{"res://tests"}, false)
+	_, err := Run("/nonexistent/godot", "/tmp", []string{"res://tests"}, false, 0)
 	if err == nil {
 		t.Fatal("expected error when godot binary not found, got nil")
 	}
