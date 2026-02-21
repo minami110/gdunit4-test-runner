@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 )
 
 // makeDummyExecutable creates a dummy executable file in dir and returns its path.
@@ -165,5 +166,31 @@ func TestParse_GodotPathNotFound(t *testing.T) {
 	_, err := Parse([]string{"--godot-path", "/nonexistent/godot", "/tmp/tests"})
 	if err == nil {
 		t.Fatal("expected error for nonexistent godot path, got nil")
+	}
+}
+
+func TestParse_TimeoutFlag(t *testing.T) {
+	dir := t.TempDir()
+	godot := makeDummyExecutable(t, dir, "godot")
+
+	cfg, err := Parse([]string{"--godot-path", godot, "--timeout", "30s"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Timeout != 30*time.Second {
+		t.Errorf("Timeout = %v, want 30s", cfg.Timeout)
+	}
+}
+
+func TestParse_TimeoutDefaultsToZero(t *testing.T) {
+	dir := t.TempDir()
+	godot := makeDummyExecutable(t, dir, "godot")
+
+	cfg, err := Parse([]string{"--godot-path", godot})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.Timeout != 0 {
+		t.Errorf("Timeout = %v, want 0", cfg.Timeout)
 	}
 }

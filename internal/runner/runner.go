@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -32,13 +33,26 @@ func BuildArgs(resPaths []string) []string {
 
 // Run executes Godot with gdUnit4 arguments from projectDir.
 // Output is captured to a temporary log file; if verbose is true it is also written to stderr.
-func Run(godotPath, projectDir string, resPaths []string, verbose bool) (*RunResult, error) {
+// If timeout > 0, the process is killed after that duration.
+func Run(godotPath, projectDir string, resPaths []string, verbose bool, timeout time.Duration) (*RunResult, error) {
 	args := BuildArgs(resPaths)
-	cmd := exec.Command(godotPath, args...)
+
+	var cmd *exec.Cmd
+	var cancelCtx context.CancelFunc
+	if timeout > 0 {
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		cancelCtx = cancel
+		cmd = exec.CommandContext(ctx, godotPath, args...)
+	} else {
+		cmd = exec.Command(godotPath, args...)
+	}
 	cmd.Dir = projectDir
 
 	tmpFile, err := os.CreateTemp("", "gdunit4-runner-*.log")
 	if err != nil {
+		if cancelCtx != nil {
+			cancelCtx()
+		}
 		return nil, fmt.Errorf("failed to create temp log file: %w", err)
 	}
 	tmpPath := tmpFile.Name()
@@ -47,6 +61,24 @@ func Run(godotPath, projectDir string, resPaths []string, verbose bool) (*RunRes
 	// when child processes inherit the pipe handle and keep it open after Godot exits.
 	cmd.Stdout = tmpFile
 	cmd.Stderr = tmpFile
+
+	// Create a pipe for stdin and close the write end immediately.
+	// This ensures the child process receives a proper EOF that sets feof(stdin)=true.
+	// Godot's LocalDebugger checks feof(stdin) on empty input — if false,
+	// it loops the debug> prompt indefinitely. NUL (os.DevNull on Windows)
+	// may not set feof, but a closed pipe always does.
+	pr, pw, pipeErr := os.Pipe()
+	if pipeErr != nil {
+		tmpFile.Close()
+		_ = os.Remove(tmpPath)
+		if cancelCtx != nil {
+			cancelCtx()
+		}
+		return nil, fmt.Errorf("failed to create stdin pipe: %w", pipeErr)
+	}
+	pw.Close()
+	cmd.Stdin = pr
+	defer pr.Close()
 
 	var wg sync.WaitGroup
 	var stopTail chan struct{}
@@ -60,6 +92,10 @@ func Run(godotPath, projectDir string, resPaths []string, verbose bool) (*RunRes
 	}
 
 	runErr := cmd.Run()
+
+	if cancelCtx != nil {
+		cancelCtx()
+	}
 
 	// Close the temp file before returning so callers can read it.
 	if closeErr := tmpFile.Close(); closeErr != nil && runErr == nil {
@@ -75,6 +111,9 @@ func Run(godotPath, projectDir string, resPaths []string, verbose bool) (*RunRes
 	if runErr != nil {
 		if exitErr, ok := runErr.(*exec.ExitError); ok {
 			exitCode = exitErr.ExitCode()
+		} else if timeout > 0 && runErr == context.DeadlineExceeded {
+			_ = os.Remove(tmpPath)
+			return nil, fmt.Errorf("Godot process timed out after %s", timeout)
 		} else {
 			// Non-exit error (e.g. binary not found at exec time).
 			_ = os.Remove(tmpPath)
