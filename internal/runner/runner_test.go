@@ -171,6 +171,46 @@ func TestRun_BinaryNotFound(t *testing.T) {
 	}
 }
 
+func TestReimport_BinaryNotFound(t *testing.T) {
+	err := Reimport("/nonexistent/godot", "/tmp")
+	if err == nil {
+		t.Fatal("expected error when godot binary not found, got nil")
+	}
+}
+
+func TestReimport_Success(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping shell script test on Windows")
+	}
+
+	dir := t.TempDir()
+	script := filepath.Join(dir, "fake-godot-reimport.sh")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Reimport(script, dir); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestReimport_NonZeroExitCode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping shell script test on Windows")
+	}
+
+	dir := t.TempDir()
+	script := filepath.Join(dir, "fake-godot-reimport-fail.sh")
+	if err := os.WriteFile(script, []byte("#!/bin/sh\nexit 1\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	err := Reimport(script, dir)
+	if err == nil {
+		t.Fatal("expected error for non-zero exit code, got nil")
+	}
+}
+
 // contains reports whether slice contains elem.
 func contains(slice []string, elem string) bool {
 	for _, s := range slice {

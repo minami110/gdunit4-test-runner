@@ -38,6 +38,14 @@ func run() int {
 		return 2
 	}
 
+	if !cfg.SkipImport {
+		fmt.Fprintln(os.Stderr, "Reimporting Godot project...")
+		if err := runner.Reimport(cfg.GodotPath, detected.ProjectDir); err != nil {
+			fmt.Fprintln(os.Stderr, "error:", err)
+			return 2
+		}
+	}
+
 	result, err := runner.Run(cfg.GodotPath, detected.ProjectDir, detected.ResPaths, cfg.Verbose, cfg.Timeout)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)

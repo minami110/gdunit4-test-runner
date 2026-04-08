@@ -31,6 +31,30 @@ func BuildArgs(resPaths []string) []string {
 	return args
 }
 
+// Reimport runs Godot in headless editor mode to refresh the script class database.
+// Equivalent to: godot --headless --editor --quit (run from projectDir)
+func Reimport(godotPath, projectDir string) error {
+	cmd := exec.Command(godotPath, "--headless", "--editor", "--quit")
+	cmd.Dir = projectDir
+
+	devNull, err := os.Open(os.DevNull)
+	if err != nil {
+		return fmt.Errorf("failed to open devnull: %w", err)
+	}
+	defer devNull.Close()
+	cmd.Stdin = devNull
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+
+	if err := cmd.Run(); err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return fmt.Errorf("Godot reimport exited with code %d", exitErr.ExitCode())
+		}
+		return fmt.Errorf("failed to run Godot reimport: %w", err)
+	}
+	return nil
+}
+
 // Run executes Godot with gdUnit4 arguments from projectDir.
 // Output is captured to a temporary log file; if verbose is true it is also written to stderr.
 // If timeout > 0, the process is killed after that duration.
