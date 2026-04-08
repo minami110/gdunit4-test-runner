@@ -15,10 +15,11 @@ var ErrVersion = errors.New("version requested")
 
 // Config holds all runtime settings for the tool.
 type Config struct {
-	TestPaths []string
-	GodotPath string
-	Verbose   bool
-	Timeout   time.Duration
+	TestPaths  []string
+	GodotPath  string
+	Verbose    bool
+	Timeout    time.Duration
+	SkipImport bool
 }
 
 // Parse parses CLI arguments and resolves configuration.
@@ -30,11 +31,13 @@ func Parse(args []string) (*Config, error) {
 	var verbose bool
 	var showVersion bool
 	var timeout time.Duration
+	var skipImport bool
 
 	fs.StringVar(&godotPath, "godot-path", "", "path to Godot binary")
 	fs.BoolVar(&verbose, "verbose", false, "stream Godot output to stderr")
 	fs.BoolVar(&showVersion, "version", false, "print version and exit")
 	fs.DurationVar(&timeout, "timeout", 0, "kill Godot after this duration (e.g. 30s); 0 means no timeout")
+	fs.BoolVar(&skipImport, "skip-import", false, "skip Godot reimport before running tests")
 
 	fs.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: gdunit4-test-runner [options] [paths...]\n\n")
@@ -42,6 +45,7 @@ func Parse(args []string) (*Config, error) {
 		fmt.Fprintf(os.Stderr, "  --godot-path <path>  path to Godot binary\n")
 		fmt.Fprintf(os.Stderr, "  --verbose            stream Godot output to stderr\n")
 		fmt.Fprintf(os.Stderr, "  --timeout <duration> kill Godot after this duration (e.g. 30s); 0 means no timeout\n")
+		fmt.Fprintf(os.Stderr, "  --skip-import        skip Godot reimport before running tests\n")
 		fmt.Fprintf(os.Stderr, "  --version            print version and exit\n")
 		fmt.Fprintf(os.Stderr, "  --help               show this help\n")
 		fmt.Fprintf(os.Stderr, "\nIf no paths are given, the current directory is used.\n")
@@ -66,10 +70,11 @@ func Parse(args []string) (*Config, error) {
 	}
 
 	return &Config{
-		TestPaths: testPaths,
-		GodotPath: resolvedGodot,
-		Verbose:   verbose,
-		Timeout:   timeout,
+		TestPaths:  testPaths,
+		GodotPath:  resolvedGodot,
+		Verbose:    verbose,
+		Timeout:    timeout,
+		SkipImport: skipImport,
 	}, nil
 }
 

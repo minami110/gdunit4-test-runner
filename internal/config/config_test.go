@@ -194,3 +194,29 @@ func TestParse_TimeoutDefaultsToZero(t *testing.T) {
 		t.Errorf("Timeout = %v, want 0", cfg.Timeout)
 	}
 }
+
+func TestParse_SkipImportFlag(t *testing.T) {
+	dir := t.TempDir()
+	godot := makeDummyExecutable(t, dir, "godot")
+
+	cfg, err := Parse([]string{"--godot-path", godot, "--skip-import"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !cfg.SkipImport {
+		t.Error("SkipImport should be true when --skip-import is set")
+	}
+}
+
+func TestParse_SkipImportDefaultsFalse(t *testing.T) {
+	dir := t.TempDir()
+	godot := makeDummyExecutable(t, dir, "godot")
+
+	cfg, err := Parse([]string{"--godot-path", godot})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.SkipImport {
+		t.Error("SkipImport should be false by default")
+	}
+}
