@@ -220,12 +220,18 @@ func BuildOutput(suites *JUnitTestSuites, crash *CrashDetails) *Output {
 		}
 	}
 
-	crashed := crash != nil
+	// A run is crashed only on a real crash signal or when no report was produced.
+	// SCRIPT ERROR lines alongside a complete report are kept as diagnostics only.
+	crashed := crash != nil && (suites == nil || crash.CrashInfo != "")
 	total := 0
 	failed := 0
 	if suites != nil {
 		total = suites.Tests
 		failed = suites.Failures + suites.Errors
+		// gdUnit4 omits the errors attribute on <testsuites>, so count failing test cases too.
+		if len(failures) > failed {
+			failed = len(failures)
+		}
 	}
 	passed := total - failed
 	if passed < 0 {

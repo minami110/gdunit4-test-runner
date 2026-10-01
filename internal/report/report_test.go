@@ -235,6 +235,77 @@ func TestBuildOutput_Crashed(t *testing.T) {
 	}
 }
 
+func TestBuildOutput_CrashStatus(t *testing.T) {
+	tests := []struct {
+		name        string
+		suites      *JUnitTestSuites
+		crash       *CrashDetails
+		wantCrashed bool
+		wantStatus  string
+	}{
+		{
+			name:        "script errors with complete passing report",
+			suites:      &JUnitTestSuites{Tests: 3},
+			crash:       &CrashDetails{ScriptErrors: "SCRIPT ERROR: Parse Error: Expected grouping expression."},
+			wantCrashed: false,
+			wantStatus:  "passed",
+		},
+		{
+			name:        "script errors with failing report",
+			suites:      &JUnitTestSuites{Tests: 3, Failures: 1},
+			crash:       &CrashDetails{ScriptErrors: "SCRIPT ERROR: Parse Error: Expected grouping expression."},
+			wantCrashed: false,
+			wantStatus:  "failed",
+		},
+		{
+			name: "script errors with error test case not counted on root",
+			suites: &JUnitTestSuites{
+				Tests: 1,
+				Suites: []JUnitTestSuite{{
+					Tests:  1,
+					Errors: 1,
+					TestCases: []JUnitTestCase{{
+						Name:  "test_broken_script_is_rejected",
+						Error: &JUnitFailure{Message: "ERROR: res://tests/test_negative_load.gd:8"},
+					}},
+				}},
+			},
+			crash:       &CrashDetails{ScriptErrors: "SCRIPT ERROR: Parse Error: Expected parameter name."},
+			wantCrashed: false,
+			wantStatus:  "failed",
+		},
+		{
+			name:        "script errors without report",
+			suites:      nil,
+			crash:       &CrashDetails{ScriptErrors: "SCRIPT ERROR: Parse Error: Expected grouping expression."},
+			wantCrashed: true,
+			wantStatus:  "crashed",
+		},
+		{
+			name:        "crash signal with report",
+			suites:      &JUnitTestSuites{Tests: 3},
+			crash:       &CrashDetails{CrashInfo: "handle_crash: Program crashed with signal 11"},
+			wantCrashed: true,
+			wantStatus:  "crashed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := BuildOutput(tt.suites, tt.crash)
+			if out.Summary.Crashed != tt.wantCrashed {
+				t.Errorf("Crashed = %v, want %v", out.Summary.Crashed, tt.wantCrashed)
+			}
+			if out.Summary.Status != tt.wantStatus {
+				t.Errorf("Status = %q, want %q", out.Summary.Status, tt.wantStatus)
+			}
+			if out.CrashDetails != tt.crash {
+				t.Errorf("CrashDetails = %+v, want %+v", out.CrashDetails, tt.crash)
+			}
+		})
+	}
+}
+
 func TestWriteJSON(t *testing.T) {
 	out := &Output{
 		Summary: Summary{

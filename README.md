@@ -100,7 +100,9 @@ gdunit4-test-runner tests/ | jq .summary
 **`summary.status`** is one of:
 - `"passed"` — all tests passed
 - `"failed"` — one or more test failures
-- `"crashed"` — Godot crashed or a script error occurred
+- `"crashed"` — Godot crashed (`handle_crash:`) or no test report was produced (e.g. a test script failed to compile)
+
+When a complete report exists, `SCRIPT ERROR:` lines from the log are still included in `crash_details.script_errors` as diagnostics, but they do not change `status` or the exit code.
 
 ## How It Works
 
@@ -111,7 +113,7 @@ gdunit4-test-runner tests/ | jq .summary
    godot --headless -s res://addons/gdUnit4/bin/GdUnitCmdTool.gd -a <res://path1> -a <res://path2> --ignoreHeadlessMode -c
    ```
 4. **Output capture**: Captures Godot stdout+stderr to a temp log file; if `--verbose` is set, also tees to stderr.
-5. **Crash detection**: Scans the log for `handle_crash:`, `SCRIPT ERROR:`, and `ERROR:` patterns.
+5. **Crash detection**: Scans the log for `handle_crash:` and `SCRIPT ERROR:` lines. Only `handle_crash:` or a missing report marks the run as crashed.
 6. **Report parsing**: Reads `reports/report_*/results.xml` (JUnit XML) produced by gdUnit4.
 7. **JSON output**: Writes structured results to stdout.
 

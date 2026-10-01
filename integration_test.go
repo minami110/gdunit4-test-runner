@@ -88,12 +88,12 @@ func buildBinary(t *testing.T) string {
 	return binPath
 }
 
-// runBinary executes the gdunit4-test-runner binary with the given --path and returns
+// runBinary executes the gdunit4-test-runner binary with the given test path and returns
 // the parsed JSON output and the process exit code.
 func runBinary(t *testing.T, binPath, godotPath, testPath string) (*integrationOutput, int) {
 	t.Helper()
 
-	cmd := exec.Command(binPath, "--path", testPath, "--godot-path", godotPath)
+	cmd := exec.Command(binPath, "--godot-path", godotPath, testPath)
 	stdout, err := cmd.Output()
 
 	exitCode := 0
